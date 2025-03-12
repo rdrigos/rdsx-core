@@ -23,6 +23,7 @@ export default typescriptEslint.config(
     },
     rules: {
       'prettier/prettier': 'error',
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 );
