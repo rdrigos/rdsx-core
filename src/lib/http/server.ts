@@ -1,8 +1,9 @@
 import { StatusCodes } from '@/lib/enums/status-codes';
+import { Request } from '@/lib/http/request';
 import http from 'node:http';
 import util from 'node:util';
 
-type Handler = (request: http.IncomingMessage, reply: http.ServerResponse) => Promise<void>;
+type Handler = (request: Request, reply: http.ServerResponse) => Promise<void>;
 
 interface ListenOptions {
   port: number;
@@ -15,27 +16,30 @@ export class Server {
 
   constructor() {
     this.endpoints = new Map();
-    this.server = http.createServer(this.handle.bind(this));
+    this.server = http.createServer((request: http.IncomingMessage, response: http.ServerResponse) => {
+      this.handle(new Request(request), response);
+    });
   }
 
-  private async handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<http.ServerResponse | undefined> {
-    const key: string = util.format('%s %s', req.method, req.url);
+  private async handle(request: Request, response: http.ServerResponse): Promise<http.ServerResponse | undefined> {
+    const key: string = util.format('%s %s', request.method, request.url);
     const handler: Handler | undefined = this.endpoints.get(key);
 
     if (!handler) {
-      return res.writeHead(StatusCodes.NOT_FOUND, { 'content-type': 'application/json' }).end(
+      return response.writeHead(StatusCodes.NOT_FOUND, { 'content-type': 'application/json' }).end(
         JSON.stringify({
-          message: util.format('%s %s not found', req.method, req.url),
+          message: util.format('%s %s not found', request.method, request.url),
           error: 'Not Found',
           statusCode: StatusCodes.NOT_FOUND,
         }),
       );
     }
 
-    await handler(req, res);
+    await handler(request, response);
   }
 
   public async listen({ port, host }: ListenOptions): Promise<void> {
     this.server.listen(port, host);
+    console.log('Sever is runing...');
   }
 }
